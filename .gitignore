@@ -1,0 +1,5 @@
+# Raw source art sheets used only to extract the sprites/backgrounds/props
+# actually shipped in assets/ — kept locally for re-extraction, not needed
+# to run the game and not tracked to keep the repo lean.
+/*.png
+!/favicon.png

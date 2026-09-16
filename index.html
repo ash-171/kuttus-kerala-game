@@ -5,50 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#1f6e5c">
 <link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
 <title>Aru's Kerala</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <svg width="0" height="0" style="position:absolute">
     <defs>
-      <symbol id="sym-plot-empty" viewBox="0 0 32 32">
-        <ellipse cx="16" cy="25" rx="13" ry="5" fill="#5a4128"/>
-        <ellipse cx="16" cy="24" rx="10" ry="3.8" fill="#2b1e12"/>
-        <ellipse cx="16" cy="23.3" rx="7.5" ry="2.6" fill="#1a120a"/>
-      </symbol>
-      <symbol id="sym-plot-growing" viewBox="0 0 32 32">
-        <ellipse cx="16" cy="24" rx="13" ry="5" fill="#8a5a3c"/>
-        <path d="M16 24 V14" stroke="#3f8862" stroke-width="2.4" stroke-linecap="round"/>
-        <ellipse cx="12" cy="15" rx="3.5" ry="1.8" fill="#3f8862"/>
-        <ellipse cx="20" cy="15" rx="3.5" ry="1.8" fill="#3f8862"/>
-      </symbol>
-      <symbol id="sym-plot-ready" viewBox="0 0 32 32">
-        <ellipse cx="16" cy="24" rx="13" ry="5" fill="#8a5a3c"/>
-        <path d="M12 24 V8 M16 24 V6 M20 24 V8" stroke="#2f7a4e" stroke-width="2.4" stroke-linecap="round"/>
-        <ellipse cx="16" cy="20" rx="4.5" ry="3.5" fill="#d9793a"/>
-      </symbol>
-      <symbol id="sym-coconut" viewBox="0 0 32 32">
-        <circle cx="16" cy="17" r="11" fill="#6b4a2f"/>
-        <circle cx="16" cy="17" r="6" fill="#e9ddbb"/>
-      </symbol>
-      <symbol id="sym-shell" viewBox="0 0 32 32">
-        <path d="M16 6 C24 8 26 20 16 26 C6 20 8 8 16 6 Z" fill="#f3e3d0" stroke="#e0a9a0" stroke-width="1"/>
-        <path d="M16 8 L16 26 M16 11 L10 22 M16 11 L22 22" stroke="#e0a9a0" stroke-width="1"/>
-      </symbol>
-      <symbol id="sym-honey" viewBox="0 0 32 32">
-        <rect x="10" y="13" width="12" height="14" rx="3" fill="#d99b2b"/>
-        <rect x="12" y="8" width="8" height="5" rx="1.5" fill="#7a5230"/>
-      </symbol>
-      <symbol id="sym-fish" viewBox="0 0 32 32">
-        <ellipse cx="14" cy="16" rx="9" ry="6" fill="currentColor"/>
-        <path d="M23 16 L30 10 L30 22 Z" fill="currentColor"/>
-        <circle cx="9" cy="14" r="1.3" fill="#2b2318"/>
-      </symbol>
-      <symbol id="sym-weasel" viewBox="0 0 32 32">
-        <ellipse cx="16" cy="20" rx="12" ry="6" fill="#9c8468"/>
-        <circle cx="26" cy="16" r="5" fill="#9c8468"/>
-        <circle cx="27.5" cy="14.5" r="1" fill="#2b2318"/>
-      </symbol>
       <symbol id="sym-coin" viewBox="0 0 32 32">
         <circle cx="16" cy="16" r="13" fill="#E7C558" stroke="#8A6B1E" stroke-width="2"/>
         <circle cx="12" cy="12" r="3.5" fill="#FFF3C4" opacity="0.8"/>
@@ -67,14 +31,16 @@
         <img id="npcTalk" class="npcTalk" hidden alt="">
         <div id="npcBubble" class="speechBubble" hidden></div>
 
-        <img id="villageTree" class="propSprite" src="assets/props/coconut_palm_small.png" hidden alt="Coconut palm">
+        <div id="plot0" class="groundPlot" hidden><div class="plotHole"></div><img class="plotPlant" alt=""></div>
+        <div id="plot1" class="groundPlot" hidden><div class="plotHole"></div><img class="plotPlant" alt=""></div>
+        <div id="plot2" class="groundPlot" hidden><div class="plotHole"></div><img class="plotPlant" alt=""></div>
+
         <img id="homeSprite" src="assets/aru_front.png" alt="Aru" hidden>
         <img id="gearIcon" class="gearIcon" src="assets/props/fishing_net.png" hidden alt="">
         <div id="homeItemFishingNet" class="homeItem" hidden title="Go fishing at the Backwaters">
           <img src="assets/props/fishing_net.png" alt="Fishing Net">
           <span class="badge">&#128269;</span>
         </div>
-        <img id="reactionFace" class="reaction" hidden alt="">
         <img id="catchIcon" class="catchIcon" hidden alt="">
 
         <div id="prompt"></div>
@@ -123,7 +89,8 @@
     <button id="sidebarToggle" type="button" aria-label="Collapse sidebar">&laquo;</button>
 
     <div id="travelOverlay" hidden>
-      <img id="travelSprite" src="assets/aru_side.png" alt="">
+      <img id="travelBgPreview" alt="">
+      <div id="travelIcon">&#128694;</div>
       <div id="travelText"></div>
       <div id="travelBarTrack"><div id="travelBarFill"></div></div>
     </div>

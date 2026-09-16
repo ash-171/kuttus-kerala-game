@@ -38,7 +38,6 @@
   // drawn there at all.
   var SCENE_ARU = {
     backwaters: { left: "22%", bottom: "38%" },
-    villageroad: { left: "58%", bottom: "17%" },
     forest: { left: "18%", bottom: "24%" },
     rainyday: { left: "42%", bottom: "12%" }
   };
@@ -47,7 +46,8 @@
   var ROAMABLE_SCENES = {
     home: { min: 6, max: 84, start: 14, bottom: "" },
     market: { min: 6, max: 90, start: 45, bottom: "16%" },
-    beach: { min: 8, max: 88, start: 40, bottom: "12%" }
+    beach: { min: 8, max: 88, start: 40, bottom: "12%" },
+    villageroad: { min: 8, max: 88, start: 58, bottom: "17%" }
   };
   var sceneX = {};
 
@@ -56,13 +56,14 @@
   };
 
   // The Market has three separate vendor stops (all the same tea-shop
-  // uncle from npc_1.png, working three counters), rather than one NPC.
+  // uncle from npc_1.png, working three counters), standing right on the
+  // road at Aru's level rather than up on the stall platforms.
   var MARKET_NPCS = [
-    { id: "tea", name: "the tea vendor", left: "8%", bottom: "22%",
+    { id: "tea", name: "the tea vendor", left: "10%", bottom: "16%",
       talk: "assets/talk/vendor_talk.gif", action: function () { visitTeaShop(); } },
-    { id: "store", name: "the shopkeeper", left: "34%", bottom: "19%",
+    { id: "store", name: "the shopkeeper", left: "36%", bottom: "16%",
       talk: "assets/talk/vendor_talk.gif", action: function () { chatVendor(); } },
-    { id: "fish", name: "the fishmonger", left: "80%", bottom: "18%",
+    { id: "fish", name: "the fishmonger", left: "78%", bottom: "16%",
       talk: "assets/talk/vendor_talk.gif", action: function () { visitFishStall(); } }
   ];
 
@@ -250,9 +251,9 @@
   var forestSpot = { cooldownUntil: 0 };
   var fishing = { status: "idle", biteAt: 0, windowEnd: 0, cooldownUntil: 0 };
   var farmPlots = [
-    { state: "empty", plantedAt: 0, readyAt: 0, becameReadyAt: 0 },
-    { state: "empty", plantedAt: 0, readyAt: 0, becameReadyAt: 0 },
-    { state: "empty", plantedAt: 0, readyAt: 0, becameReadyAt: 0 }
+    { state: "empty", plantedAt: 0, readyAt: 0, becameReadyAt: 0, x: 20 },
+    { state: "empty", plantedAt: 0, readyAt: 0, becameReadyAt: 0, x: 50 },
+    { state: "empty", plantedAt: 0, readyAt: 0, becameReadyAt: 0, x: 80 }
   ];
 
   // --- daily streak (localStorage) -------------------------------------------
@@ -309,12 +310,12 @@
   var streakPanelEl = document.getElementById("streakPanel");
   var energyFillEl = document.getElementById("energyFill");
   var travelOverlay = document.getElementById("travelOverlay");
-  var travelSprite = document.getElementById("travelSprite");
+  var travelBgPreview = document.getElementById("travelBgPreview");
+  var travelIcon = document.getElementById("travelIcon");
   var travelText = document.getElementById("travelText");
   var travelBarFill = document.getElementById("travelBarFill");
   var homeSprite = document.getElementById("homeSprite");
   var walkHintEl = document.getElementById("walkHint");
-  var reactionFace = document.getElementById("reactionFace");
   var npcSprite = document.getElementById("npcSprite");
   var npcSprite2 = document.getElementById("npcSprite2");
   var npcSprite3 = document.getElementById("npcSprite3");
@@ -331,8 +332,8 @@
   var dpadEl = document.getElementById("dpad");
   var dpadLeftBtn = document.getElementById("dpadLeft");
   var dpadRightBtn = document.getElementById("dpadRight");
-  var villageTreeEl = document.getElementById("villageTree");
   var gearIconEl = document.getElementById("gearIcon");
+  var plotEls = [document.getElementById("plot0"), document.getElementById("plot1"), document.getElementById("plot2")];
 
   homeItemFishingNetEl.addEventListener("click", function () { travelTo("backwaters"); });
 
@@ -355,29 +356,18 @@
   }
   function setPrompt(text) { promptEl.textContent = text || ""; }
 
+  // Emotions show on Aru himself — his whole body pose swaps to real
+  // drawn artwork from character_expressions.png — instead of a small
+  // face icon floating at the top of the screen.
   var reactionTimer = null;
   function showReaction(name, ms) {
-    reactionFace.src = "assets/expr_" + name + ".png";
-    reactionFace.hidden = false;
-    reactionFace.style.animation = "none";
-    void reactionFace.offsetWidth;
-    reactionFace.style.animation = "";
-    if (reactionTimer) clearTimeout(reactionTimer);
-    reactionTimer = setTimeout(function () { reactionFace.hidden = true; }, ms || 1700);
-    if (name === "sad") showSadPose(1100);
-  }
-
-  // Briefly swap Aru's whole-body pose to the sad artwork (not just the
-  // small face icon) so failures actually read on his body language.
-  var sadPoseTimer = null;
-  function showSadPose(ms) {
     if (!homeSprite || homeSprite.hidden) return;
     var restoreSrc = ROAMABLE_SCENES[currentScene] && homeMoving ? "assets/aru_side.png" : "assets/aru_front.png";
-    homeSprite.src = "assets/aru_sad.png";
-    if (sadPoseTimer) clearTimeout(sadPoseTimer);
-    sadPoseTimer = setTimeout(function () {
+    homeSprite.src = "assets/aru_" + name + ".png";
+    if (reactionTimer) clearTimeout(reactionTimer);
+    reactionTimer = setTimeout(function () {
       if (!traveling) homeSprite.src = restoreSrc;
-    }, ms || 1100);
+    }, ms || 1300);
   }
 
   var catchTimer = null;
@@ -406,13 +396,14 @@
   }
   function clearPlayerAction(cls) { homeSprite.classList.remove(cls); }
 
-  var treeShakeTimer = null;
-  function shakeTree(ms) {
-    villageTreeEl.classList.remove("shaking");
-    void villageTreeEl.offsetWidth;
-    villageTreeEl.classList.add("shaking");
-    if (treeShakeTimer) clearTimeout(treeShakeTimer);
-    treeShakeTimer = setTimeout(function () { villageTreeEl.classList.remove("shaking"); }, ms || 1000);
+  var sceneShakeTimer = null;
+  function shakeScene(ms) {
+    var scene = document.getElementById("scene");
+    scene.classList.remove("shaking");
+    void scene.offsetWidth;
+    scene.classList.add("shaking");
+    if (sceneShakeTimer) clearTimeout(sceneShakeTimer);
+    sceneShakeTimer = setTimeout(function () { scene.classList.remove("shaking"); }, ms || 500);
   }
 
   function renderNpc() {
@@ -533,15 +524,7 @@
       }
     }
 
-    // The coconut palm sits back in the tree line, behind Ammuma, at the
-    // same modest scale as the other background palms — not a foreground
-    // prop.
-    villageTreeEl.hidden = name !== "villageroad";
-    if (name === "villageroad") {
-      villageTreeEl.style.left = "30%";
-      villageTreeEl.style.bottom = "18%";
-      villageTreeEl.style.height = "24%";
-    }
+    if (name === "villageroad") renderVillagePlots(); else plotEls.forEach(function (el) { el.hidden = true; });
 
     var gearReady = name === "backwaters" && hasRequiredTool("backwaters");
     gearIconEl.hidden = !gearReady;
@@ -594,6 +577,11 @@
     }
   }
 
+  // A simple mode icon + progress bar over a dimmed preview of where Aru's
+  // headed — no character sprite running across the screen, so a short
+  // hop and a long one both just read as "loading", not a glitchy sprint.
+  var TRAVEL_ICONS = { walk: "\u{1F6B6}", ferry: "\u{1F6F6}", bus: "\u{1F68C}", dash: "\u{1F3C3}" };
+
   function travelTo(dest) {
     if (traveling || dest === currentScene) return;
     traveling = true;
@@ -604,24 +592,18 @@
 
     spendEnergy(Math.round(TRAVEL_COST * energyMultiplier()));
     travelText.textContent = text;
-    travelSprite.src = "assets/aru_side.png";
-    travelSprite.style.setProperty("--facing", -1);
-    travelSprite.classList.add("walking");
-    travelSprite.style.transition = "none";
-    travelSprite.style.left = "-12%";
+    travelIcon.textContent = TRAVEL_ICONS[loc.mode] || "\u{1F6B6}";
+    travelBgPreview.src = dest === "home" ? HOME_BG : LOCATIONS[dest].bg;
     travelBarFill.style.transition = "none";
     travelBarFill.style.width = "0%";
     travelOverlay.hidden = false;
     requestAnimationFrame(function () {
-      travelSprite.style.transition = "left " + duration + "ms linear";
-      travelSprite.style.left = "104%";
       travelBarFill.style.transition = "width " + duration + "ms linear";
       travelBarFill.style.width = "100%";
     });
 
     setTimeout(function () {
       travelOverlay.hidden = true;
-      travelSprite.classList.remove("walking");
       traveling = false;
       setScene(dest);
       if (dest === "home") {
@@ -650,6 +632,7 @@
         showReaction("surprised");
       }
     });
+    renderVillagePlots();
     renderActivity();
   }
 
@@ -756,42 +739,61 @@
     return card;
   }
 
-  // Banana plots grow through real growth-stage art (seedling -> young ->
-  // mature) over GROW_TIME_MS, then show a harvestable bunch.
+  // Banana plots grow through real growth-stage art (a bare hole -> seedling
+  // -> young -> mature) over GROW_TIME_MS, then show a harvestable bunch —
+  // planted and grown right on the scene, at wherever Aru was standing.
   function bananaGrowthStage(plot, now) {
-    if (plot.state === "ready") return { img: "banana_bunch.png", label: "Ready!" };
+    if (plot.state === "ready") return { img: "banana_bunch.png", label: "Ready! Tap to harvest" };
     var progress = (now - plot.plantedAt) / GROW_TIME_MS;
-    if (progress < 0.34) return { img: "banana_seedling.png", label: "Sprouting…" };
-    if (progress < 0.72) return { img: "banana_young.png", label: "Growing…" };
+    if (progress < 0.18) return { img: null, label: "Just planted…" };
+    if (progress < 0.5) return { img: "banana_seedling.png", label: "Sprouting…" };
+    if (progress < 0.8) return { img: "banana_young.png", label: "Growing…" };
     return { img: "banana_mature.png", label: "Almost ready…" };
   }
 
-  function buildBananaCard() {
+  function renderVillagePlots() {
     var now = performance.now();
+    farmPlots.forEach(function (plot, i) {
+      var el = plotEls[i];
+      if (plot.state === "empty") { el.hidden = true; return; }
+      el.hidden = false;
+      el.style.left = plot.x + "%";
+      var stage = bananaGrowthStage(plot, now);
+      var img = el.querySelector(".plotPlant");
+      if (stage.img) { img.src = "assets/props/" + stage.img; img.hidden = false; }
+      else { img.hidden = true; img.removeAttribute("src"); }
+      var label = el.querySelector(".plotLabel");
+      if (!label) { label = document.createElement("div"); label.className = "plotLabel"; el.appendChild(label); }
+      label.textContent = stage.label;
+      el.onclick = function () {
+        if (plot.state === "ready") harvestPlot(i);
+        else spawnToast("Still growing — check back soon.");
+      };
+    });
+  }
+
+  function buildBananaCard() {
     var card = document.createElement("div");
     card.className = "card";
     var h = document.createElement("h3"); h.textContent = "Banana Patch";
     card.appendChild(h);
-    var row = document.createElement("div");
-    row.className = "plotRow";
-    farmPlots.forEach(function (plot, i) {
-      var cell = document.createElement("div");
-      cell.className = "plot";
-      if (plot.state === "empty") {
-        cell.innerHTML = '<svg><use href="#sym-plot-empty"/></svg><span>Empty</span>';
-      } else {
-        var stage = bananaGrowthStage(plot, now);
-        cell.innerHTML = '<img src="assets/props/' + stage.img + '" alt=""><span>' + stage.label + "</span>";
-      }
+    var emptySlot = -1;
+    for (var i = 0; i < farmPlots.length; i++) { if (farmPlots[i].state === "empty") { emptySlot = i; break; } }
+    var readyCount = farmPlots.filter(function (p) { return p.state === "ready"; }).length;
+    var p = document.createElement("p");
+    if (emptySlot === -1) {
+      p.textContent = readyCount ? "A patch on the road is ready — tap it to harvest!" : "All three patches are planted. Watch them grow on the road.";
+    } else {
+      p.textContent = "Plant a banana sapling right where Aru's standing.";
+    }
+    card.appendChild(p);
+    if (emptySlot !== -1) {
       var btn = document.createElement("button");
       btn.className = "btn small";
-      if (plot.state === "ready") { btn.textContent = "Harvest"; btn.addEventListener("click", function () { harvestPlot(i); }); }
-      else if (plot.state === "empty") { btn.textContent = "Plant"; btn.addEventListener("click", function () { plantPlot(i); }); }
-      else { btn.textContent = "Growing"; btn.disabled = true; }
-      cell.appendChild(btn);
-      row.appendChild(cell);
-    });
-    card.appendChild(row);
+      btn.textContent = "Plant here";
+      btn.addEventListener("click", function () { plantPlot(emptySlot); });
+      card.appendChild(btn);
+    }
     return card;
   }
 
@@ -1169,7 +1171,7 @@
     palm.cooldownUntil = now + 18000;
     spendEnergy(GATHER_COST);
     playerAction("action-cast", 400);
-    shakeTree(900);
+    shakeScene(400);
     if (Math.random() < GATHER_FAIL_CHANCE) {
       spawnToast(COCONUT_MISS);
       showReaction("sad");
@@ -1189,26 +1191,30 @@
     farmPlots[i].state = "growing";
     farmPlots[i].plantedAt = now;
     farmPlots[i].readyAt = now + GROW_TIME_MS;
+    farmPlots[i].x = sceneX.villageroad != null ? sceneX.villageroad : 50;
     playerAction("action-plant", 600);
     spawnToast(BANANA_PLANT);
     showReaction("curious");
+    renderVillagePlots();
     renderActivity();
   }
   function harvestPlot(i) {
+    var plotX = farmPlots[i].x;
     farmPlots[i].state = "empty";
     playerAction("action-plant", 600);
     if (Math.random() < GATHER_FAIL_CHANCE) {
       spawnToast(BANANA_MISS);
       showReaction("sad");
+      renderVillagePlots();
       renderHud(); renderActivity();
       return;
     }
     var gain = Math.round(rand(5, 9) * energyMultiplier());
     addProduce("banana", gain);
-    showCatch("assets/props/banana_bunch.png");
+    showCatch("assets/props/banana_bunch.png", 1600, plotX + "%", 17);
     spawnToast(pick(BANANA_HARVEST) + " It's in Aru's bag (worth " + gain + ") — sell it at the Market.");
     showReaction("excited");
-    playBlip(); renderHud(); renderActivity();
+    playBlip(); renderVillagePlots(); renderHud(); renderActivity();
   }
 
   function gatherShells() {
@@ -1350,6 +1356,11 @@
       }
       if (moving) homeSprite.style.setProperty("--facing", dx > 0 ? -1 : 1);
       homeSprite.style.left = sceneX[currentScene] + "%";
+
+      if (currentScene === "villageroad") {
+        var ammumaLeft = parseFloat(NPCS.villageroad.left);
+        npcSprite.style.setProperty("--facing", sceneX.villageroad < ammumaLeft ? -1 : 1);
+      }
     }
     requestAnimationFrame(homeTick);
   }
@@ -1389,7 +1400,10 @@
         }
       }
     });
-    if ((farmChanged || anyGrowing) && currentScene === "villageroad" && currentTab === "activity") renderActivity();
+    if ((farmChanged || anyGrowing) && currentScene === "villageroad") {
+      renderVillagePlots();
+      if (farmChanged && currentTab === "activity") renderActivity();
+    }
 
     renderHud();
   }, 200);

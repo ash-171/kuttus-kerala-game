@@ -75,12 +75,6 @@ html, body {
   75%  { transform: translateY(-6%) rotate(-2deg) scaleX(var(--facing,1)); }
   100% { transform: translateY(0) rotate(0deg) scaleX(var(--facing,1)); }
 }
-/* Subtler run-bob for the travel loading screen: vertical bounce only, no
-   rotation, so the sprite doesn't look like it's flailing while it slides. */
-@keyframes runBob {
-  0%, 100% { transform: translateY(0) scaleX(var(--facing,1)); }
-  50%      { transform: translateY(-8%) scaleX(var(--facing,1)); }
-}
 @media (prefers-reduced-motion: no-preference) {
   #homeSprite.idle { animation: idleBreathe 2.6s ease-in-out infinite; }
   #homeSprite.walking { animation: walkBob 0.5s linear infinite; }
@@ -164,21 +158,59 @@ html, body {
 }
 .gearIcon[hidden] { display: none; }
 
-.propSprite {
+/* Banana plots, planted right where Aru is standing when you hit "Plant
+   here" — grown and harvested directly on the scene, not in the sidebar. */
+.groundPlot {
   position: absolute;
-  z-index: 1;
-  filter: drop-shadow(0 4px 5px rgba(0,0,0,0.25));
+  bottom: 15%;
+  width: 12%;
+  min-width: 46px;
+  max-width: 90px;
+  z-index: 2;
+  transform: translateX(-50%);
   cursor: pointer;
 }
-.propSprite[hidden] { display: none; }
-@keyframes shakeTree {
-  0%, 100% { transform: rotate(0deg); }
-  20%      { transform: rotate(-4deg); }
-  40%      { transform: rotate(3.5deg); }
-  60%      { transform: rotate(-3deg); }
-  80%      { transform: rotate(2deg); }
+.groundPlot[hidden] { display: none; }
+.groundPlot .plotHole {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 90%;
+  height: 34%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, #120c07 0%, #2b1e12 55%, rgba(43,30,18,0) 100%);
 }
-.propSprite.shaking { animation: shakeTree 0.5s ease 2; transform-origin: 50% 96%; }
+.groundPlot .plotPlant {
+  position: relative;
+  display: block;
+  width: 100%;
+  filter: drop-shadow(0 4px 4px rgba(0,0,0,0.3));
+}
+.groundPlot .plotPlant[hidden] { display: none; }
+.groundPlot .plotLabel {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(43,35,24,0.85);
+  color: #fbf3de;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* A little punch on the whole scene when Aru shakes a coconut palm. */
+@keyframes sceneShake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-0.6%); }
+  40%      { transform: translateX(0.5%); }
+  60%      { transform: translateX(-0.4%); }
+  80%      { transform: translateX(0.3%); }
+}
+#scene.shaking { animation: sceneShake 0.4s ease; }
 
 /* A tool Aru owns, shown leaning by the house at Home; click travels to
    where it's used. The magnifying glass badge hints it's inspectable. */
@@ -288,25 +320,6 @@ html, body {
   border-color: rgba(255,251,240,0.97) transparent transparent transparent;
 }
 @keyframes bubblePop { from { opacity: 0; transform: translateY(6px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
-
-.reaction {
-  position: absolute;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  border: 2px solid #fbf3de;
-  background: rgba(255,251,240,0.9);
-  box-shadow: 0 8px 16px -6px rgba(0,0,0,0.4);
-  z-index: 6;
-  object-fit: cover;
-  object-position: top;
-  animation: reactionPop 0.35s cubic-bezier(.34,1.56,.64,1);
-}
-.reaction[hidden] { display: none; }
-@keyframes reactionPop { from { opacity: 0; transform: translateX(-50%) scale(0.4) translateY(-10px); } to { opacity: 1; transform: translateX(-50%) scale(1) translateY(0); } }
 
 #walkHint {
   flex: 0 0 auto;
@@ -493,22 +506,6 @@ html, body {
 .btn.gold { background: #c6963a; }
 .btn.small { padding: 5px 10px; font-size: 10.5px; }
 
-.plotRow { display: flex; gap: 6px; }
-.plot {
-  width: 64px;
-  border: 1px solid rgba(43,35,24,0.2);
-  border-radius: 9px;
-  background: #fbf3de;
-  padding: 5px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  font-size: 9.5px;
-}
-.plot svg { width: 24px; height: 24px; }
-.plot img { width: 100%; height: 34px; object-fit: contain; }
-
 /* --- shop -------------------------------------------------------------- */
 
 .shopIntro {
@@ -612,28 +609,39 @@ html, body {
   position: absolute;
   inset: 0;
   z-index: 50;
-  background: linear-gradient(180deg, #274a3f, #16241d);
+  background: #16241d;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 18px;
+  gap: 16px;
   overflow: hidden;
 }
 #travelOverlay[hidden] { display: none; }
-#travelSprite {
-  height: 22%;
+#travelBgPreview {
   position: absolute;
-  bottom: 34%;
-  left: -12%;
-  filter: drop-shadow(0 6px 6px rgba(0,0,0,0.4));
-  will-change: left, transform;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(3px) brightness(0.4) saturate(0.8);
+  opacity: 0.55;
+}
+#travelIcon {
+  position: relative;
+  font-size: 46px;
+  line-height: 1;
+  filter: drop-shadow(0 6px 10px rgba(0,0,0,0.5));
 }
 @media (prefers-reduced-motion: no-preference) {
-  #travelSprite.walking { animation: runBob 0.32s ease-in-out infinite; }
+  #travelIcon { animation: travelBob 1.1s ease-in-out infinite; }
 }
-#travelText { color: #f3efe3; font-size: 14px; text-align: center; max-width: 80%; }
-#travelBarTrack { width: 60%; height: 8px; border-radius: 5px; background: rgba(255,255,255,0.18); overflow: hidden; }
+@keyframes travelBob {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-10%) scale(1.06); }
+}
+#travelText { position: relative; color: #f3efe3; font-size: 14px; text-align: center; max-width: 80%; }
+#travelBarTrack { position: relative; width: 60%; height: 8px; border-radius: 5px; background: rgba(255,255,255,0.18); overflow: hidden; }
 #travelBarFill { height: 100%; width: 0%; background: linear-gradient(90deg, #d9ae55, #c6963a); }
 
 /* --- narrow viewports: stack sidebar below the scene -------------------- */
