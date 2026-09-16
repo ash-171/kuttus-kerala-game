@@ -1,0 +1,684 @@
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #16241d;
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: #2b2318;
+  overflow: hidden;
+}
+
+#stage {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  background: #efe6d4;
+}
+
+/* --- scene (fills remaining space) --------------------------------------- */
+
+#sceneWrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+#scene {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  background: #cfe8e0;
+}
+
+#sceneBg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+#homeSprite {
+  position: absolute;
+  bottom: 8%;
+  height: 19%;
+  filter: drop-shadow(0 6px 6px rgba(0,0,0,0.3));
+  z-index: 3;
+  will-change: left, transform;
+}
+#homeSprite[hidden] { display: none; }
+/* "Ready to fish" lean, shown only when Aru owns a net at the Backwaters —
+   a dedicated idle keyframe (not just a static transform) so it survives
+   the idle-breathing animation instead of being overridden by it. */
+@keyframes idleFishingReady {
+  0%, 100% { transform: rotate(-6deg) translateY(0) scaleX(var(--facing,1)); }
+  50%      { transform: rotate(-6deg) translateY(-2%) scaleX(var(--facing,1)); }
+}
+#homeSprite.fishing-ready { transform-origin: 60% 90%; }
+@media (prefers-reduced-motion: no-preference) {
+  #homeSprite.fishing-ready.idle { animation: idleFishingReady 2.6s ease-in-out infinite; }
+}
+
+@keyframes idleBreathe { 0%,100%{ transform: translateY(0) scaleX(var(--facing,1)); } 50%{ transform: translateY(-2%) scaleX(var(--facing,1)); } }
+@keyframes walkBob {
+  0%   { transform: translateY(0) rotate(0deg) scaleX(var(--facing,1)); }
+  25%  { transform: translateY(-6%) rotate(2deg) scaleX(var(--facing,1)); }
+  50%  { transform: translateY(0) rotate(0deg) scaleX(var(--facing,1)); }
+  75%  { transform: translateY(-6%) rotate(-2deg) scaleX(var(--facing,1)); }
+  100% { transform: translateY(0) rotate(0deg) scaleX(var(--facing,1)); }
+}
+/* Subtler run-bob for the travel loading screen: vertical bounce only, no
+   rotation, so the sprite doesn't look like it's flailing while it slides. */
+@keyframes runBob {
+  0%, 100% { transform: translateY(0) scaleX(var(--facing,1)); }
+  50%      { transform: translateY(-8%) scaleX(var(--facing,1)); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  #homeSprite.idle { animation: idleBreathe 2.6s ease-in-out infinite; }
+  #homeSprite.walking { animation: walkBob 0.5s linear infinite; }
+}
+
+/* Quick contextual action animations for Aru — reusing the same static
+   art (no new frames) but giving visible feedback for what he's doing. */
+@keyframes actionCast {
+  0%   { transform: rotate(0deg) scaleX(var(--facing,1)); }
+  35%  { transform: rotate(-14deg) scaleX(var(--facing,1)); }
+  100% { transform: rotate(0deg) scaleX(var(--facing,1)); }
+}
+@keyframes actionShake {
+  0%, 100% { transform: translateX(0) rotate(0deg) scaleX(var(--facing,1)); }
+  25%      { transform: translateX(-3%) rotate(-5deg) scaleX(var(--facing,1)); }
+  75%      { transform: translateX(3%) rotate(5deg) scaleX(var(--facing,1)); }
+}
+@keyframes actionCrouch {
+  0%, 100% { transform: translateY(0) scaleY(1) scaleX(var(--facing,1)); }
+  50%      { transform: translateY(5%) scaleY(0.88) scaleX(var(--facing,1)); }
+}
+@keyframes actionReel {
+  0%, 100% { transform: translateY(0) scaleX(var(--facing,1)); }
+  30%      { transform: translateY(-14%) scaleX(var(--facing,1)); }
+  55%      { transform: translateY(0) scaleX(var(--facing,1)); }
+  75%      { transform: translateY(-6%) scaleX(var(--facing,1)); }
+}
+@keyframes actionAlert {
+  0%, 100% { transform: translateX(0) scaleX(var(--facing,1)); }
+  25%      { transform: translateX(-2%) scaleX(var(--facing,1)); }
+  75%      { transform: translateX(2%) scaleX(var(--facing,1)); }
+}
+@keyframes actionSlump {
+  0%   { transform: translateY(0) rotate(0deg) scaleX(var(--facing,1)); }
+  100% { transform: translateY(3%) rotate(-4deg) scaleX(var(--facing,1)); }
+}
+/* A single clean kneel-down-and-up for planting — no repeating bounce. */
+@keyframes actionPlant {
+  0%       { transform: translateY(0) scaleX(var(--facing,1)); }
+  45%, 65% { transform: translateY(9%) scaleX(var(--facing,1)); }
+  100%     { transform: translateY(0) scaleX(var(--facing,1)); }
+}
+/* !important: these short feedback animations must always win over the
+   resting .idle / .fishing-ready animations, regardless of class order. */
+#homeSprite.action-cast   { animation: actionCast 0.4s ease !important; }
+#homeSprite.action-shake  { animation: actionShake 0.45s ease 2 !important; }
+#homeSprite.action-crouch { animation: actionCrouch 0.5s ease !important; }
+#homeSprite.action-reel   { animation: actionReel 0.6s ease !important; }
+#homeSprite.action-alert  { animation: actionAlert 0.3s ease 3 !important; }
+#homeSprite.action-slump  { animation: actionSlump 0.4s ease forwards !important; }
+#homeSprite.action-wait   { animation: idleBreathe 1.3s ease-in-out infinite !important; }
+#homeSprite.action-plant  { animation: actionPlant 0.55s ease !important; }
+
+.catchIcon {
+  position: absolute;
+  width: 15%;
+  min-width: 40px;
+  max-width: 76px;
+  z-index: 5;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.35));
+  animation: catchPop 1.6s ease forwards;
+  pointer-events: none;
+}
+.catchIcon[hidden] { display: none; }
+@keyframes catchPop {
+  0%   { opacity: 0; transform: translateY(10%) scale(0.6); }
+  15%  { opacity: 1; transform: translateY(-10%) scale(1.08); }
+  30%  { transform: translateY(-14%) scale(1); }
+  80%  { opacity: 1; transform: translateY(-22%) scale(1); }
+  100% { opacity: 0; transform: translateY(-34%) scale(0.9); }
+}
+
+.gearIcon {
+  position: absolute;
+  width: 8%;
+  min-width: 22px;
+  max-width: 40px;
+  z-index: 4;
+  filter: drop-shadow(0 3px 4px rgba(0,0,0,0.35));
+  pointer-events: none;
+}
+.gearIcon[hidden] { display: none; }
+
+.propSprite {
+  position: absolute;
+  z-index: 1;
+  filter: drop-shadow(0 4px 5px rgba(0,0,0,0.25));
+  cursor: pointer;
+}
+.propSprite[hidden] { display: none; }
+@keyframes shakeTree {
+  0%, 100% { transform: rotate(0deg); }
+  20%      { transform: rotate(-4deg); }
+  40%      { transform: rotate(3.5deg); }
+  60%      { transform: rotate(-3deg); }
+  80%      { transform: rotate(2deg); }
+}
+.propSprite.shaking { animation: shakeTree 0.5s ease 2; transform-origin: 50% 96%; }
+
+/* A tool Aru owns, shown leaning by the house at Home; click travels to
+   where it's used. The magnifying glass badge hints it's inspectable. */
+.homeItem {
+  position: absolute;
+  z-index: 2;
+  cursor: pointer;
+  filter: drop-shadow(0 4px 5px rgba(0,0,0,0.3));
+}
+.homeItem[hidden] { display: none; }
+.homeItem .badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fbf3de;
+  border: 2px solid #1f6e5c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+.homeItem img { width: 100%; height: 100%; object-fit: contain; }
+#homeItemFishingNet { left: 68%; bottom: 10%; width: 8%; min-width: 34px; max-width: 56px; height: auto; }
+
+/* On-screen walk controls for touch devices (home hub only) */
+#dpad {
+  position: absolute;
+  left: 50%;
+  bottom: 4%;
+  transform: translateX(-50%);
+  z-index: 6;
+  display: flex;
+  gap: 18px;
+}
+#dpad[hidden] { display: none; }
+#dpad button {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,251,240,0.9);
+  background: rgba(43,35,24,0.45);
+  color: #fbf3de;
+  font-size: 22px;
+  line-height: 1;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+#dpad button:active { background: rgba(43,35,24,0.7); }
+@media (hover: hover) and (pointer: fine) {
+  #dpad { display: none; }
+}
+
+.npc {
+  position: absolute;
+  bottom: 9%;
+  height: 24%;
+  filter: drop-shadow(0 5px 5px rgba(0,0,0,0.3));
+  z-index: 2;
+}
+.npc[hidden] { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .npc { animation: idleBreathe 3.1s ease-in-out infinite; }
+}
+
+/* Talking animation: a small alternating-frame GIF (two real drawn
+   expressions) pinned by the NPC's face, not a transform/wobble effect. */
+.npcTalk {
+  position: absolute;
+  bottom: 30%;
+  width: 15%;
+  min-width: 46px;
+  max-width: 84px;
+  z-index: 4;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.35));
+  border-radius: 50%;
+  border: 2px solid #fbf3de;
+  background: rgba(255,251,240,0.85);
+}
+.npcTalk[hidden] { display: none; }
+
+.speechBubble {
+  position: absolute;
+  bottom: 38%;
+  background: rgba(255,251,240,0.97);
+  border: 1px solid rgba(43,35,24,0.25);
+  border-radius: 12px;
+  padding: 7px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  max-width: 200px;
+  box-shadow: 0 8px 18px -8px rgba(0,0,0,0.4);
+  z-index: 5;
+  animation: bubblePop 0.18s ease;
+}
+.speechBubble[hidden] { display: none; }
+.speechBubble::after {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  left: 22px;
+  border-width: 8px 6px 0 6px;
+  border-style: solid;
+  border-color: rgba(255,251,240,0.97) transparent transparent transparent;
+}
+@keyframes bubblePop { from { opacity: 0; transform: translateY(6px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+.reaction {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid #fbf3de;
+  background: rgba(255,251,240,0.9);
+  box-shadow: 0 8px 16px -6px rgba(0,0,0,0.4);
+  z-index: 6;
+  object-fit: cover;
+  object-position: top;
+  animation: reactionPop 0.35s cubic-bezier(.34,1.56,.64,1);
+}
+.reaction[hidden] { display: none; }
+@keyframes reactionPop { from { opacity: 0; transform: translateX(-50%) scale(0.4) translateY(-10px); } to { opacity: 1; transform: translateX(-50%) scale(1) translateY(0); } }
+
+#walkHint {
+  flex: 0 0 auto;
+  text-align: center;
+  font-size: 11.5px;
+  color: #f3efe3;
+  background: #16241d;
+  padding: 5px 0;
+}
+#walkHint[hidden] { display: none; }
+
+#prompt {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  left: 10px;
+  text-align: center;
+  font-size: 12px;
+  color: rgba(43,35,24,0.7);
+  pointer-events: none;
+}
+
+#toasts {
+  position: absolute;
+  top: 38px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  pointer-events: none;
+  width: 88%;
+  z-index: 7;
+}
+.toast {
+  background: rgba(43, 35, 24, 0.92);
+  color: #f6efdd;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 6px 11px;
+  border-radius: 10px;
+  animation: toastIn 0.2s ease, toastOut 0.4s ease 3.4s forwards;
+  max-width: 100%;
+}
+@keyframes toastIn { from { opacity: 0; transform: translateY(-6px);} to { opacity:1; transform: translateY(0);} }
+@keyframes toastOut { to { opacity: 0; transform: translateY(-6px);} }
+
+/* --- sidebar --------------------------------------------------------------- */
+
+#sidebar {
+  flex: 0 0 auto;
+  width: min(340px, 34vw);
+  min-width: 260px;
+  height: 100%;
+  background: #fbf3de;
+  border-left: 1px solid rgba(43,35,24,0.18);
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 10px;
+  overflow: hidden;
+  position: relative;
+  transition: width 0.22s ease, min-width 0.22s ease, padding 0.22s ease;
+}
+#stage.sidebarCollapsed #sidebar {
+  width: 0;
+  min-width: 0;
+  padding-left: 0;
+  padding-right: 0;
+  border-left: none;
+  overflow: hidden;
+}
+#stage.sidebarCollapsed #sidebar > * { opacity: 0; pointer-events: none; }
+#sidebarToggle {
+  position: absolute;
+  top: 50%;
+  right: min(340px, 34vw);
+  transform: translate(50%, -50%);
+  width: 24px;
+  height: 48px;
+  border-radius: 8px;
+  border: 1px solid rgba(43,35,24,0.22);
+  background: #fbf3de;
+  color: #4a3f2c;
+  cursor: pointer;
+  font-size: 13px;
+  z-index: 8;
+  box-shadow: -2px 2px 8px -2px rgba(0,0,0,0.25);
+  transition: right 0.22s ease;
+}
+#stage.sidebarCollapsed #sidebarToggle { right: 0; }
+
+#hud {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#coinPanel, #streakPanel, #energyPanel {
+  background: rgba(255, 251, 240, 0.94);
+  border: 1px solid rgba(43, 35, 24, 0.2);
+  border-radius: 999px;
+  padding: 5px 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 700;
+  font-size: 12.5px;
+}
+
+#coinCount, #streakCount { font-variant-numeric: tabular-nums; }
+#streakFlame { font-size: 12.5px; filter: grayscale(0.15); }
+#streakPanel.cold #streakFlame { opacity: 0.35; filter: grayscale(1); }
+
+#energyPanel .label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6e5f45;
+}
+#energyPanel .bar { width: 50px; height: 7px; border-radius: 5px; background: #ddd3b8; overflow: hidden; }
+#energyFill { height: 100%; width: 100%; background: linear-gradient(90deg, #4fa98c, #1f6e5c); transition: width 0.3s ease, background 0.3s; }
+
+#tabs {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 6px;
+}
+.tabBtn {
+  flex: 1;
+  border: 1px solid rgba(43,35,24,0.22);
+  background: rgba(255,251,240,0.6);
+  color: #6e5f45;
+  font-weight: 700;
+  font-size: 12px;
+  border-radius: 10px;
+  padding: 7px 6px;
+  cursor: pointer;
+}
+.tabBtn.active {
+  background: #1f6e5c;
+  color: #fbf3de;
+  border-color: #1f6e5c;
+}
+
+#panels {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.panel[hidden] { display: none; }
+
+.card {
+  background: rgba(255,251,240,0.94);
+  border: 1px solid rgba(43,35,24,0.2);
+  border-radius: 12px;
+  padding: 9px 10px;
+  box-shadow: 0 6px 14px -10px rgba(0,0,0,0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  margin-bottom: 8px;
+}
+.card h3 { margin: 0; font-size: 12.5px; }
+.card p { margin: 0; font-size: 10.5px; color: #6e5f45; line-height: 1.35; }
+
+.btn {
+  border: none;
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  background: #1f6e5c;
+  color: #fbf3de;
+}
+.btn:disabled { background: #ddd3b8; color: #8a7c5e; cursor: default; }
+.btn.gold { background: #c6963a; }
+.btn.small { padding: 5px 10px; font-size: 10.5px; }
+
+.plotRow { display: flex; gap: 6px; }
+.plot {
+  width: 64px;
+  border: 1px solid rgba(43,35,24,0.2);
+  border-radius: 9px;
+  background: #fbf3de;
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 9.5px;
+}
+.plot svg { width: 24px; height: 24px; }
+.plot img { width: 100%; height: 34px; object-fit: contain; }
+
+/* --- shop -------------------------------------------------------------- */
+
+.shopIntro {
+  margin: 0 0 8px;
+  font-size: 10.5px;
+  color: #6e5f45;
+  text-align: center;
+}
+#bagGrid, .itemGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+.bagSection + .bagSection { margin-top: 10px; }
+.bagSection h4 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: #6e5f45; }
+.sectionLabel { width: 100%; margin: 4px 0 2px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: #6e5f45; text-align: left; }
+.shopItem {
+  background: rgba(255,251,240,0.94);
+  border: 1px solid rgba(43,35,24,0.2);
+  border-radius: 10px;
+  padding: 7px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+.shopItem .thumb {
+  width: 100%;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.shopItem .thumb img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.shopItem .name { font-size: 10.5px; font-weight: 700; }
+.shopItem .price {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #8A6B1E;
+}
+.shopItem .price svg { width: 12px; height: 12px; }
+.shopItem .btn { width: 100%; }
+.shopItem.owned { opacity: 0.7; }
+.shopItem .use { font-size: 9.5px; color: #6e5f45; line-height: 1.3; }
+.bagEmpty {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 11px;
+  color: #6e5f45;
+  padding: 18px 8px;
+}
+
+/* --- bubble bar (location travel) --------------------------------------- */
+
+.bubbleWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: inherit;
+}
+#bubbleBar {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(43,35,24,0.15);
+}
+.bubble {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid #fbf3de;
+  outline: 2px solid rgba(43,35,24,0.25);
+  overflow: hidden;
+  box-shadow: 0 5px 10px -6px rgba(0,0,0,0.4);
+  background-size: cover;
+  background-position: center;
+  transition: transform 0.15s ease;
+}
+.bubbleWrap:hover .bubble, .bubbleWrap:focus-visible .bubble { transform: scale(1.06); }
+.bubbleWrap .label { font-size: 10px; font-weight: 700; color: #4a3f2c; }
+.bubbleWrap.locked .bubble { filter: grayscale(0.7) brightness(0.75); }
+.bubbleWrap.locked .label { color: #9c8c6c; }
+.bubble.special { outline-color: #c6963a; }
+
+/* --- travel overlay: covers the whole stage, not just the scene -------- */
+
+#travelOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  background: linear-gradient(180deg, #274a3f, #16241d);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  overflow: hidden;
+}
+#travelOverlay[hidden] { display: none; }
+#travelSprite {
+  height: 22%;
+  position: absolute;
+  bottom: 34%;
+  left: -12%;
+  filter: drop-shadow(0 6px 6px rgba(0,0,0,0.4));
+  will-change: left, transform;
+}
+@media (prefers-reduced-motion: no-preference) {
+  #travelSprite.walking { animation: runBob 0.32s ease-in-out infinite; }
+}
+#travelText { color: #f3efe3; font-size: 14px; text-align: center; max-width: 80%; }
+#travelBarTrack { width: 60%; height: 8px; border-radius: 5px; background: rgba(255,255,255,0.18); overflow: hidden; }
+#travelBarFill { height: 100%; width: 0%; background: linear-gradient(90deg, #d9ae55, #c6963a); }
+
+/* --- narrow viewports: stack sidebar below the scene -------------------- */
+
+@media (max-width: 760px) {
+  #stage { flex-direction: column; }
+  #sceneWrap { flex: 1 1 auto; min-height: 0; }
+  #sidebar {
+    width: 100%;
+    min-width: 0;
+    max-height: 46vh;
+    border-left: none;
+    border-top: 1px solid rgba(43,35,24,0.18);
+  }
+  #bagGrid, .itemGrid { grid-template-columns: repeat(3, 1fr); }
+  #dpad { bottom: 8%; }
+}
+
+@media (max-width: 420px) {
+  #bagGrid, .itemGrid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* --- rotate-to-landscape prompt (phones only) --------------------------- */
+
+#rotatePrompt {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: #16241d;
+  color: #fbf3de;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+  padding: 24px;
+}
+#rotatePrompt .icon { font-size: 48px; animation: rotateHint 1.6s ease-in-out infinite; }
+#rotatePrompt p { max-width: 260px; font-size: 14px; line-height: 1.5; margin: 0; }
+@keyframes rotateHint {
+  0%, 100% { transform: rotate(0deg); }
+  50%      { transform: rotate(90deg); }
+}
+@media (max-width: 760px) and (orientation: portrait) {
+  #stage { display: none; }
+  #rotatePrompt { display: flex; }
+}
