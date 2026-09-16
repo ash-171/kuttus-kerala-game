@@ -3,6 +3,7 @@
 html, body {
   margin: 0;
   height: 100%;
+  height: 100dvh;
   background: #16241d;
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
   color: #2b2318;
@@ -12,9 +13,18 @@ html, body {
 #stage {
   position: relative;
   width: 100vw;
+  /* 100vh is the *largest* possible viewport on mobile (toolbars hidden);
+     100dvh tracks the actual visible height as the browser chrome shows
+     and hides, so the bottom of the page doesn't end up cut off behind
+     it. Falls back to 100vh on browsers that don't know dvh. */
   height: 100vh;
+  height: 100dvh;
   display: flex;
   background: #efe6d4;
+  /* Keep content clear of notches / the home-indicator area on phones,
+     in whichever edge they land on once locked to landscape. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  box-sizing: border-box;
 }
 
 /* --- scene (fills remaining space) --------------------------------------- */
@@ -644,24 +654,44 @@ html, body {
 #travelBarTrack { position: relative; width: 60%; height: 8px; border-radius: 5px; background: rgba(255,255,255,0.18); overflow: hidden; }
 #travelBarFill { height: 100%; width: 0%; background: linear-gradient(90deg, #d9ae55, #c6963a); }
 
-/* --- narrow viewports: stack sidebar below the scene -------------------- */
+/* --- narrow / short viewports (phones) ----------------------------------
+   Portrait phones show the rotate-to-landscape prompt instead of #stage
+   (see below), so anything narrow here is a phone already in landscape —
+   keep the scene and sidebar side by side and just make the sidebar
+   slimmer, rather than stacking them, which left too little height for
+   either and cut content off at the bottom. */
 
 @media (max-width: 760px) {
-  #stage { flex-direction: column; }
-  #sceneWrap { flex: 1 1 auto; min-height: 0; }
   #sidebar {
-    width: 100%;
-    min-width: 0;
-    max-height: 46vh;
-    border-left: none;
-    border-top: 1px solid rgba(43,35,24,0.18);
+    width: min(230px, 42vw);
+    min-width: 180px;
+    padding: 8px;
   }
-  #bagGrid, .itemGrid { grid-template-columns: repeat(3, 1fr); }
-  #dpad { bottom: 8%; }
+  #bagGrid, .itemGrid { grid-template-columns: repeat(2, 1fr); }
 }
 
-@media (max-width: 420px) {
-  #bagGrid, .itemGrid { grid-template-columns: repeat(2, 1fr); }
+/* Short landscape height (most phones) — compact the vertical rhythm so
+   the whole sidebar fits without anything being clipped at the bottom;
+   #panels still scrolls internally as a safety net besides. */
+@media (max-height: 430px) {
+  #sidebar { padding: 6px; gap: 6px; }
+  #hud { gap: 4px; }
+  #coinPanel, #streakPanel, #energyPanel { padding: 3px 8px; font-size: 11px; }
+  #energyPanel .bar { width: 40px; }
+  #tabs { gap: 4px; }
+  .tabBtn { padding: 5px 4px; font-size: 10.5px; }
+  #bubbleBar { gap: 6px; padding-bottom: 5px; }
+  .bubble { width: 36px; height: 36px; }
+  .bubbleWrap { gap: 2px; }
+  .bubbleWrap .label { font-size: 8.5px; }
+  .card { padding: 6px 7px; gap: 4px; margin-bottom: 5px; }
+  .card h3 { font-size: 11px; }
+  .card p { font-size: 9px; }
+  .btn { padding: 5px 10px; font-size: 10.5px; }
+  .btn.small { padding: 4px 8px; font-size: 9.5px; }
+  #walkHint { font-size: 10px; padding: 3px 0; }
+  #dpad { bottom: 3%; gap: 12px; }
+  #dpad button { width: 40px; height: 40px; font-size: 17px; }
 }
 
 /* --- rotate-to-landscape prompt (phones only) --------------------------- */
