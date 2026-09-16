@@ -1,4 +1,15 @@
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+  /* No native "save image" / text-selection callout, drag ghost, or
+     selection highlight on long-press anywhere in the game — it's all
+     buttons and art, never text you'd want to copy. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  user-drag: none;
+  -webkit-tap-highlight-color: transparent;
+}
 
 html, body {
   margin: 0;
@@ -8,6 +19,12 @@ html, body {
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
   color: #2b2318;
   overflow: hidden;
+  touch-action: manipulation;
+}
+
+img { -webkit-user-drag: none; user-drag: none; }
+button, .bubbleWrap, .groundPlot, .homeItem, .npc, .shopItem button {
+  touch-action: manipulation;
 }
 
 #stage {
@@ -173,9 +190,16 @@ html, body {
 .groundPlot {
   position: absolute;
   bottom: 15%;
+  /* Explicit height (not just width) — without this, percentage heights
+     on the hole/plant below resolve against an undefined parent height
+     and effectively collapse to nothing, which is why the plant used to
+     look like it never fully left the hole. */
   width: 12%;
+  height: 20%;
   min-width: 46px;
   max-width: 90px;
+  min-height: 78px;
+  max-height: 150px;
   z-index: 2;
   transform: translateX(-50%);
   cursor: pointer;
@@ -186,15 +210,22 @@ html, body {
   left: 50%;
   bottom: 0;
   transform: translateX(-50%);
-  width: 90%;
-  height: 34%;
+  width: 92%;
+  height: 26%;
   border-radius: 50%;
   background: radial-gradient(ellipse at center, #120c07 0%, #2b1e12 55%, rgba(43,30,18,0) 100%);
+  z-index: 1;
 }
 .groundPlot .plotPlant {
-  position: relative;
-  display: block;
+  position: absolute;
+  left: 50%;
+  bottom: 8%;
+  transform: translateX(-50%);
   width: 100%;
+  max-height: 96%;
+  object-fit: contain;
+  object-position: bottom;
+  z-index: 2;
   filter: drop-shadow(0 4px 4px rgba(0,0,0,0.3));
 }
 .groundPlot .plotPlant[hidden] { display: none; }
@@ -210,6 +241,7 @@ html, body {
   padding: 2px 7px;
   border-radius: 999px;
   white-space: nowrap;
+  z-index: 3;
 }
 
 /* A little punch on the whole scene when Aru shakes a coconut palm. */
@@ -501,6 +533,15 @@ html, body {
 }
 .card h3 { margin: 0; font-size: 12.5px; }
 .card p { margin: 0; font-size: 10.5px; color: #6e5f45; line-height: 1.35; }
+.cooldownTimer {
+  font-size: 10px;
+  font-weight: 700;
+  color: #8A6B1E;
+  background: rgba(198,150,58,0.15);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-variant-numeric: tabular-nums;
+}
 
 .btn {
   border: none;
@@ -533,6 +574,20 @@ html, body {
 .bagSection + .bagSection { margin-top: 10px; }
 .bagSection h4 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: #6e5f45; }
 .sectionLabel { width: 100%; margin: 4px 0 2px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: #6e5f45; text-align: left; }
+
+.storeSubTabs { display: flex; gap: 5px; width: 100%; }
+.subTabBtn {
+  flex: 1;
+  border: 1px solid rgba(43,35,24,0.22);
+  background: rgba(255,251,240,0.5);
+  color: #6e5f45;
+  font-weight: 700;
+  font-size: 10.5px;
+  border-radius: 8px;
+  padding: 5px 4px;
+  cursor: pointer;
+}
+.subTabBtn.active { background: #c6963a; color: #fbf3de; border-color: #c6963a; }
 .shopItem {
   background: rgba(255,251,240,0.94);
   border: 1px solid rgba(43,35,24,0.2);

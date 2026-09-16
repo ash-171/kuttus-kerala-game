@@ -45,25 +45,25 @@
   // Scenes Aru can freely walk around in with arrow keys.
   var ROAMABLE_SCENES = {
     home: { min: 6, max: 84, start: 14, bottom: "" },
-    market: { min: 6, max: 90, start: 45, bottom: "16%" },
+    market: { min: 6, max: 90, start: 45, bottom: "25%" },
     beach: { min: 8, max: 88, start: 40, bottom: "12%" },
-    villageroad: { min: 8, max: 88, start: 58, bottom: "17%" }
+    villageroad: { min: 8, max: 88, start: 58, bottom: "24%" }
   };
   var sceneX = {};
 
   var NPCS = {
-    villageroad: { name: "Ammuma", img: "assets/npc_grandma.png", left: "38%", bottom: "16%", talk: "assets/talk/ammuma_talk.gif", chat: function () { chatAmmuma(); } }
+    villageroad: { name: "Ammuma", img: "assets/npc_grandma.png", left: "38%", bottom: "23%", talk: "assets/talk/ammuma_talk.gif", chat: function () { chatAmmuma(); } }
   };
 
   // The Market has three separate vendor stops (all the same tea-shop
   // uncle from npc_1.png, working three counters), standing right on the
   // road at Aru's level rather than up on the stall platforms.
   var MARKET_NPCS = [
-    { id: "tea", name: "the tea vendor", left: "10%", bottom: "16%",
+    { id: "tea", name: "the tea vendor", left: "10%", bottom: "25%",
       talk: "assets/talk/vendor_talk.gif", action: function () { visitTeaShop(); } },
-    { id: "store", name: "the shopkeeper", left: "36%", bottom: "16%",
+    { id: "store", name: "the shopkeeper", left: "36%", bottom: "25%",
       talk: "assets/talk/vendor_talk.gif", action: function () { chatVendor(); } },
-    { id: "fish", name: "the fishmonger", left: "78%", bottom: "16%",
+    { id: "fish", name: "the fishmonger", left: "78%", bottom: "25%",
       talk: "assets/talk/vendor_talk.gif", action: function () { visitFishStall(); } }
   ];
 
@@ -244,7 +244,7 @@
   var vendor = { cooldownUntil: 0 };
   var ammuma = { cooldownUntil: 0 };
   var storeOpen = false;
-  var produceStallOpen = false;
+  var storeSubTab = "buy";
   var fishStallOpen = false;
   var palm = { cooldownUntil: 0 };
   var shellSpot = { cooldownUntil: 0 };
@@ -538,8 +538,9 @@
     homeItemFishingNetEl.hidden = !(name === "home" && ownedProps.has("fishing_net"));
 
     currentTab = "activity";
+    lastCooldownSecond = null;
     storeOpen = false;
-    produceStallOpen = false;
+    storeSubTab = "buy";
     fishStallOpen = false;
     renderNpc();
     renderActivity();
@@ -678,7 +679,8 @@
         if (fishing.status === "biting") { fishLabel = "Reel it in!"; fishDesc = "Something's biting — now!"; }
         if (fishing.status === "idle" && now < fishing.cooldownUntil) fishDesc = "Let the water settle a moment.";
         var card = buildActionCard("Fishing", fishDesc, fishLabel, function () { doFish(); },
-          fishing.status === "idle" && now < fishing.cooldownUntil);
+          fishing.status === "idle" && now < fishing.cooldownUntil, false,
+          fishing.status === "idle" ? fishing.cooldownUntil : 0);
         if (fishStreak > 0) {
           var streakLine = document.createElement("p");
           streakLine.textContent = "Catch streak: " + fishStreak + " (+" + Math.min(fishStreak, 5) + " bonus)";
@@ -696,7 +698,7 @@
       activityPanel.appendChild(buildActionCard(
         "Coconut Palms",
         now < palm.cooldownUntil ? COCONUT_COOLDOWN : "Shake down a coconut to sell.",
-        "Shake palm", function () { harvestPalm(); }, now < palm.cooldownUntil
+        "Shake palm", function () { harvestPalm(); }, now < palm.cooldownUntil, false, palm.cooldownUntil
       ));
       activityPanel.appendChild(buildBananaCard());
 
@@ -704,14 +706,14 @@
       activityPanel.appendChild(buildActionCard(
         "Tideline",
         now < shellSpot.cooldownUntil ? SHELL_COOLDOWN : "Comb the sand for shells.",
-        "Search the sand", function () { gatherShells(); }, now < shellSpot.cooldownUntil
+        "Search the sand", function () { gatherShells(); }, now < shellSpot.cooldownUntil, false, shellSpot.cooldownUntil
       ));
 
     } else if (currentScene === "forest") {
       activityPanel.appendChild(buildActionCard(
         "Forest Trail",
         now < forestSpot.cooldownUntil ? FOREST_COOLDOWN : "Forage along the trail.",
-        "Forage", function () { gatherForest(); }, now < forestSpot.cooldownUntil
+        "Forage", function () { gatherForest(); }, now < forestSpot.cooldownUntil, false, forestSpot.cooldownUntil
       ));
 
     } else if (currentScene === "rainyday") {
@@ -725,7 +727,7 @@
     }
   }
 
-  function buildActionCard(title, desc, btnLabel, onClick, disabled, small) {
+  function buildActionCard(title, desc, btnLabel, onClick, disabled, small, cooldownUntil) {
     var card = document.createElement("div");
     card.className = "card";
     var h = document.createElement("h3"); h.textContent = title;
@@ -736,6 +738,13 @@
     btn.disabled = !!disabled;
     btn.addEventListener("click", onClick);
     card.appendChild(h); card.appendChild(p); card.appendChild(btn);
+    var remain = cooldownUntil ? cooldownUntil - performance.now() : 0;
+    if (remain > 0) {
+      var timer = document.createElement("div");
+      timer.className = "cooldownTimer";
+      timer.textContent = "Ready in " + Math.ceil(remain / 1000) + "s";
+      card.appendChild(timer);
+    }
     return card;
   }
 
@@ -814,25 +823,26 @@
     card.appendChild(greetBtn);
 
     if (storeOpen) {
-      var buyHeading = document.createElement("div");
-      buyHeading.className = "sectionLabel";
-      buyHeading.textContent = "Buy";
-      card.appendChild(buyHeading);
-      var grid = document.createElement("div");
-      grid.className = "itemGrid";
-      card.appendChild(grid);
-      renderShopGrid(grid);
+      var subTabs = document.createElement("div");
+      subTabs.className = "storeSubTabs";
+      var buyTabBtn = document.createElement("button");
+      buyTabBtn.className = "subTabBtn" + (storeSubTab === "buy" ? " active" : "");
+      buyTabBtn.textContent = "Buy";
+      buyTabBtn.addEventListener("click", function () { storeSubTab = "buy"; renderActivity(); });
+      var sellTabBtn = document.createElement("button");
+      sellTabBtn.className = "subTabBtn" + (storeSubTab === "sell" ? " active" : "");
+      sellTabBtn.textContent = "Sell";
+      sellTabBtn.addEventListener("click", function () { storeSubTab = "sell"; renderActivity(); });
+      subTabs.appendChild(buyTabBtn);
+      subTabs.appendChild(sellTabBtn);
+      card.appendChild(subTabs);
 
-      var sellBtn = document.createElement("button");
-      sellBtn.className = "btn small";
-      var produceEmpty = produceBagIsEmpty();
-      sellBtn.textContent = produceStallOpen ? "Hide Sell Produce" : "Sell Produce";
-      sellBtn.disabled = !produceStallOpen && produceEmpty;
-      sellBtn.title = produceEmpty ? "Nothing harvested yet" : "";
-      sellBtn.addEventListener("click", function () { produceStallOpen = !produceStallOpen; renderActivity(); });
-      card.appendChild(sellBtn);
-
-      if (produceStallOpen) {
+      if (storeSubTab === "buy") {
+        var grid = document.createElement("div");
+        grid.className = "itemGrid";
+        card.appendChild(grid);
+        renderShopGrid(grid);
+      } else {
         var caught = PRODUCE_TYPES.filter(function (t) { return produceBag[t.id] && produceBag[t.id].count > 0; });
         if (caught.length) {
           var sellGrid = document.createElement("div");
@@ -849,7 +859,7 @@
       var closeBtn = document.createElement("button");
       closeBtn.className = "btn small";
       closeBtn.textContent = "Close Store";
-      closeBtn.addEventListener("click", function () { storeOpen = false; produceStallOpen = false; renderActivity(); });
+      closeBtn.addEventListener("click", function () { storeOpen = false; renderActivity(); });
       card.appendChild(closeBtn);
     }
     return card;
@@ -1368,8 +1378,31 @@
 
   // --- ticking (frame-independent, checked on a light interval) ---------------
 
+  // The one gather-cooldown card each scene can show a live "Ready in Xs"
+  // countdown for — re-rendered at most once a second (only when the
+  // displayed number actually changes) so the button re-enables itself
+  // without needing another click or scene change.
+  var lastCooldownSecond = null;
+  function activeCooldownUntil() {
+    if (currentScene === "villageroad") return palm.cooldownUntil;
+    if (currentScene === "beach") return shellSpot.cooldownUntil;
+    if (currentScene === "forest") return forestSpot.cooldownUntil;
+    if (currentScene === "backwaters" && fishing.status === "idle") return fishing.cooldownUntil;
+    return 0;
+  }
+
   setInterval(function () {
     var now = performance.now();
+
+    if (currentTab === "activity") {
+      var cd = activeCooldownUntil();
+      var remain = cd - now;
+      var sec = remain > 0 ? Math.ceil(remain / 1000) : 0;
+      if (sec !== lastCooldownSecond) {
+        lastCooldownSecond = sec;
+        renderActivity();
+      }
+    }
     if (fishing.status === "waiting" && now >= fishing.biteAt) {
       fishing.status = "biting";
       fishing.windowEnd = now + 900;
